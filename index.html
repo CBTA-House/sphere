@@ -183,6 +183,8 @@ COMMITTEES.forEach((c, ci) => {
   .sub{font-size:12px; color:var(--ink-muted); margin:0}
   .status{font-size:11.5px; padding:3px 8px; border-radius:5px; border:1px solid var(--hairline);
     background:var(--chip); color:var(--ink-2); display:inline-flex; align-items:center; gap:6px}
+  .status{cursor:pointer}
+  .status:hover{border-color:var(--ink-muted)}
   .status::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--ink-muted)}
   .status.live::before{background:#0ca30c}
   .status.loading::before{background:#fab219}
@@ -202,7 +204,7 @@ COMMITTEES.forEach((c, ci) => {
   .btn:focus-visible,input:focus-visible,.legend-item:focus-visible{outline:2px solid var(--focus); outline-offset:2px}
   #search{
     border:1px solid var(--hairline); background:var(--chip); color:var(--ink);
-    font:inherit; font-size:12.5px; padding:6px 10px; border-radius:7px; width:170px;
+    font:inherit; font-size:12.5px; padding:6px 10px; border-radius:7px; width:132px;
   }
   #search::placeholder{color:var(--ink-muted)}
 
@@ -288,7 +290,13 @@ COMMITTEES.forEach((c, ci) => {
     padding:24px; max-width:620px; width:100%; max-height:88vh; overflow-y:auto; position:relative}
   .sm-box h2{font-size:18px; margin:0 0 6px; letter-spacing:-.01em}
   .sm-x{position:absolute; top:16px; right:16px}
-  .sm-state{font-size:13px; color:var(--ink-2); margin:0 0 16px}
+  .sm-sub{font-size:13px; color:var(--ink-muted); margin:0 0 20px}
+  .sm-h3{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-muted);
+    font-weight:660; margin:24px 0 8px; padding-top:18px; border-top:1px solid var(--hairline)}
+  .sm-box .sm-h3:first-of-type{margin-top:0; padding-top:0; border-top:0}
+  .sm-note{font-size:13px; color:var(--ink-2); margin:0 0 12px; line-height:1.6}
+  .sm-note code{font-size:12px; background:var(--chip); padding:1px 5px; border-radius:4px}
+  .sm-state{font-size:13px; color:var(--ink-2); margin:0 0 14px}
   .sm-steps{font-size:13.5px; color:var(--ink-2); line-height:1.65; margin:0 0 18px; padding-left:20px}
   .sm-steps li{margin-bottom:7px}
   .sm-steps strong{color:var(--ink)}
@@ -331,20 +339,16 @@ COMMITTEES.forEach((c, ci) => {
     <p class="sub" id="app-sub">Drag to rotate · scroll to zoom · click a face</p>
   </div>
   <span class="demo-badge" id="demo-badge">Demo roster</span>
-  <span class="status" id="status" hidden></span>
+  <button class="status" id="status" hidden title="Click to re-read the sheet now"></button>
 </div>
 
 <div class="bar" id="topright">
-  <input id="search" type="search" placeholder="Search role or name" aria-label="Search roles and names">
-  <button class="btn" id="btn-rotate" aria-pressed="true" title="Toggle auto-rotation">Auto-rotate</button>
-  <button class="btn" id="btn-labels" aria-pressed="true" title="Toggle links between tiers">Links</button>
-  <button class="btn" id="btn-table" title="Accessible list of every role">List view</button>
+  <input id="search" type="search" placeholder="Search" aria-label="Search roles and names">
+  <button class="btn" id="btn-rotate" aria-pressed="true" title="Toggle auto-rotation">Rotate</button>
+  <button class="btn" id="btn-labels" aria-pressed="true" title="Toggle the lines between tiers">Links</button>
+  <button class="btn" id="btn-table" title="Read the whole roster as text">List</button>
   <button class="btn" id="btn-theme" title="Toggle light/dark">Light</button>
-  <button class="btn" id="btn-import" title="Import profile cards (many at once) or a roster CSV">Import</button>
-  <button class="btn" id="btn-refresh" title="Re-read the live sheet now" hidden>Refresh</button>
-  <button class="btn" id="btn-sheet" title="Connect or change the live Google Sheet">Sheet</button>
-  <button class="btn" id="btn-export" title="Download a full roster CSV (everything, including photos)">CSV</button>
-  <button class="btn" id="btn-save" title="Download this sphere with the current roster baked in">Save file</button>
+  <button class="btn" id="btn-manage" title="Sheet, photos, exports — for whoever maintains this">Manage</button>
   <input type="file" id="file" accept=".csv,.json,text/csv,application/json" multiple hidden>
 </div>
 
@@ -369,29 +373,45 @@ COMMITTEES.forEach((c, ci) => {
 <div id="sheet-modal" hidden role="dialog" aria-modal="true" aria-labelledby="sm-title">
   <div class="sm-box">
     <button class="btn sm-x" id="sm-close" aria-label="Close">Close</button>
-    <h2 id="sm-title">Live Google Sheet</h2>
+    <h2 id="sm-title">Manage</h2>
+    <p class="sm-sub">Nothing here is needed to view the sphere. This is for whoever looks after it.</p>
+
+    <h3 class="sm-h3">Live Google Sheet</h3>
     <p class="sm-state" id="sm-state">Not connected.</p>
-
     <ol class="sm-steps">
-      <li>Press <strong>Download starter sheet</strong> below and import that CSV into a new Google Sheet
-          (<em>File → Import → Replace current sheet</em>). Put it in a Shared Drive, not a personal one.</li>
-      <li>In the Sheet: <em>File → Share → Publish to web</em> → pick the tab → <strong>Comma-separated values (.csv)</strong> → Publish.</li>
-      <li>Paste the link it gives you below and press <strong>Test and connect</strong>.</li>
-      <li>Press <strong>Save file</strong> in the toolbar and share that copy. The link is stored inside it.</li>
+      <li><strong>Download starter sheet</strong> below, then import that CSV into a new Google Sheet
+          (<em>File → Import → Replace current sheet</em>). Keep it in a Shared Drive.</li>
+      <li>In the Sheet: <em>File → Share → Publish to web</em> → pick the tab →
+          <strong>Comma-separated values (.csv)</strong> → Publish.</li>
+      <li>Paste that link below and press <strong>Test and connect</strong>.</li>
     </ol>
-
     <label for="sm-url">Published CSV link</label>
     <input type="url" id="sm-url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"
            spellcheck="false" autocomplete="off">
     <p class="sm-msg" id="sm-msg"></p>
-
     <div class="sm-actions">
       <button class="btn primary" id="sm-connect">Test and connect</button>
+      <button class="btn" id="sm-refresh" hidden>Refresh now</button>
       <button class="btn" id="sm-template">Download starter sheet</button>
       <button class="btn" id="sm-disconnect" hidden>Disconnect</button>
     </div>
-    <p class="sm-foot">Nothing here is saved until you press <strong>Save file</strong> in the toolbar.
-      Until then this only affects the tab you have open.</p>
+
+    <h3 class="sm-h3">Photos</h3>
+    <p class="sm-note">Members fill in <code>my-profile.html</code> and send you a small card file.
+      Select as many as you like at once — they merge by role, and structure is left alone.</p>
+    <div class="sm-actions">
+      <button class="btn" id="sm-import">Import profile cards…</button>
+    </div>
+
+    <h3 class="sm-h3">Save &amp; export</h3>
+    <p class="sm-note"><strong>Save file</strong> writes a new copy of this page with the current
+      roster, photos and sheet link inside it. Rename it to <code>index.html</code> and upload it to
+      replace the hosted one. You only need this after merging photos or changing the structure —
+      not when someone edits the Sheet.</p>
+    <div class="sm-actions">
+      <button class="btn primary" id="sm-save">Save file</button>
+      <button class="btn" id="sm-export">Download roster CSV</button>
+    </div>
   </div>
 </div>
 
@@ -5838,6 +5858,18 @@ function buildNodeObject(node) {
   const halo = new THREE.Mesh(new THREE.RingGeometry(R * 1.32, R * 1.52, 48), haloMat);
   halo.position.z = 0.06; halo.visible = false;
 
+  // Billboard each mesh in its OWN onBeforeRender, immediately before it is
+  // drawn, rather than from a separate rAF loop. A separate loop runs at its
+  // own rate and lags the renderer during a camera fly-to, which skews the
+  // discs into ellipses. Doing it here is exact and order-independent.
+  [disc, ring, halo].forEach(m => {
+    m.onBeforeRender = function (renderer, scene, camera) {
+      this.quaternion.copy(camera.quaternion);
+      this.updateMatrix();
+      this.matrixWorld.multiplyMatrices(this.parent.matrixWorld, this.matrix);
+    };
+  });
+
   group.add(disc, ring, halo);
   group.__disc = disc; group.__ring = ring; group.__halo = halo;
   node.__obj = group;
@@ -6034,7 +6066,6 @@ function frame() {
   for (const n of nodes) {
     const o = n.__obj;
     if (!o) continue;
-    o.quaternion.copy(cam.quaternion);
     const d = _v.set(n.fx, n.fy, n.fz).distanceTo(camPos);
     // Depth is "how much does this node face the camera", measured per shell —
     // otherwise the small inner shells sit permanently near the middle of the
@@ -6432,8 +6463,15 @@ function wireUI() {
     if (selected) renderPanel(selected);
   });
 
-  $("#btn-export").addEventListener("click", () => download("committee-sphere-roster.csv", toCSV(DATA), "text/csv"));
-  $("#btn-refresh").addEventListener("click", () => refreshFromSheet(true));
+  $("#sm-export").addEventListener("click", () => download("committee-sphere-roster.csv", toCSV(DATA), "text/csv"));
+  $("#sm-refresh").addEventListener("click", () => refreshFromSheet(true));
+  $("#sm-import").addEventListener("click", () => $("#file").click());
+  $("#sm-save").addEventListener("click", () => {
+    try { download("committee-sphere.html", serializeSphere(), "text/html"); }
+    catch (err) { alert("Could not build the file: " + err.message); }
+  });
+  // the status pill doubles as the refresh control
+  $("#status").addEventListener("click", () => refreshFromSheet(true));
 
   /* Sheet dialog — this exists so that connecting a sheet never requires
      opening this file in a text editor. That was the one mandatory code edit
@@ -6443,18 +6481,19 @@ function wireUI() {
   function syncDialog() {
     $("#sm-url").value = sheetUrl;
     $("#sm-disconnect").hidden = !sheetUrl;
+    $("#sm-refresh").hidden = !sheetUrl;
     $("#sm-state").textContent = sheetUrl
       ? "Connected. " + (sheetState.mode === "live" ? "Last read succeeded." : "Last read failed — " + (sheetState.note || "unknown reason"))
       : "Not connected. The sphere is showing the roster built into this file.";
   }
   function openDialog(){ syncDialog(); msg(""); modal.hidden = false; $("#sm-url").focus(); }
   function closeDialog(){ modal.hidden = true; }
-  $("#btn-sheet").addEventListener("click", openDialog);
+  $("#btn-manage").addEventListener("click", openDialog);
   $("#sm-close").addEventListener("click", closeDialog);
   modal.addEventListener("click", e => { if (e.target === modal) closeDialog(); });
   $("#sm-template").addEventListener("click", () => download("sphere-sheet-template.csv", sheetTemplateCSV(), "text/csv"));
   $("#sm-disconnect").addEventListener("click", () => {
-    sheetUrl = ""; setStatus("local"); $("#btn-refresh").hidden = true;
+    sheetUrl = ""; setStatus("local");
     syncDialog(); msg("Disconnected. Press Save file to make that stick.", "ok");
   });
   $("#sm-connect").addEventListener("click", async () => {
@@ -6474,7 +6513,6 @@ function wireUI() {
       const known = rows.filter(r => DATA.some(p => p.id === (r.id || "").trim())).length;
       if (!known) throw new Error("read " + rows.length + " row(s), but none had an id matching this roster");
       await refreshFromSheet(false);
-      $("#btn-refresh").hidden = false;
       syncDialog();
       msg("Connected \u2014 " + known + " matching row(s). Now press Save file in the toolbar to keep it.", "ok");
     } catch (err) {
@@ -6483,11 +6521,6 @@ function wireUI() {
       msg("Could not use that link: " + (err && err.message || err), "bad");
     }
   });
-  $("#btn-save").addEventListener("click", () => {
-    try { download("committee-sphere.html", serializeSphere(), "text/html"); }
-    catch (err) { alert("Could not build the file: " + err.message); }
-  });
-  $("#btn-import").addEventListener("click", () => $("#file").click());
   $("#file").addEventListener("change", async e => {
     const files = [...e.target.files]; if (!files.length) return;
     const read = f => new Promise((res, rej) => {
@@ -6582,7 +6615,6 @@ if (!hasWebGL()) {
   frame();
   renderStatus();
   if (sheetUrl) {
-    $("#btn-refresh").hidden = false;
     refreshFromSheet(false);
     const every = (typeof SHEET_REFRESH_MINUTES === "number" ? SHEET_REFRESH_MINUTES : 0) * 60000;
     if (every > 0) setInterval(() => refreshFromSheet(false), every);
