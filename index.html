@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
+<html lang="en" data-theme="light"><head>
 <meta charset="utf-8">
 <!-- ══════════════════════════════════════════════════════════════════════
      EVERYTHING YOU EDIT IS IN THE SCRIPT DIRECTLY BELOW.
@@ -9,130 +8,2055 @@
      minified line — do not edit), and the engine.
      ══════════════════════════════════════════════════════════════════════ -->
 <script>/* __SPHERE_DATA__ */
-/* ══════════════════════════════════════════════════════════════════════════
-   ▼▼▼  EDIT BELOW  ▼▼▼
-   This block is the whole editable surface. Change it, save, reopen the file
-   in a browser — that is the entire loop. Nothing else needs touching, and
-   everything further down (the stylesheet, the markup, one very long minified
-   library line, the engine) can be ignored.
-
-   Prefer a spreadsheet? Press CSV in the app to download the current roster,
-   edit it in Excel or Sheets, then press Import. That path never touches code,
-   but it cannot change the four constants directly below — only the rows.
-   ══════════════════════════════════════════════════════════════════════════ */
-
-/* ── 0. Live data source (optional) ───────────────────────────────────────
-   Paste the "publish to web" CSV link of your Google Sheet here and the sphere
-   will pull role detail from it every time someone opens the page. Leave it as
-   "" and the sphere just uses the roster built below.
-
-   In the Sheet:  File → Share → Publish to web → pick the tab → CSV → Publish.
-   Columns: `id` is the key and must match the roster. `role` is there so humans
-   can find their row. `name` and `photo` are optional. EVERY OTHER COLUMN
-   becomes a detail row in the panel, in column order — so adding a field is a
-   spreadsheet column, not a code change.
-   Or just press the "Sheet" button in the app — it does all of this for you.   */
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEk2FxVe3BF8ESNmra97OZ10g1O7WiJy8yDmbasDCcFrGtwxb5_gRtmAmMQTWTXhcDfg02_qXGt2B2/pub?output=csv";
-
-/* How often to re-check the sheet while the page is open, in minutes. 0 = never. */
 const SHEET_REFRESH_MINUTES = 5;
-
-/* Tier shells, innermost first. `radius` = distance from centre,
-   `nodeR` = disc size, `spread` = how tightly children fan under a parent.
-   Colours are set in the CSS block at the top (--t0 … --t3). */
 const TIERS = [
-  { id:"adcom",       label:"AdCom",            radius: 48,  nodeR: 9.6,  spread: 0.80 },
-  { id:"chairs",      label:"Committee Chairs", radius: 124, nodeR: 8.6,  spread: 0.54 },
-  { id:"committee",   label:"Committee",        radius: 196, nodeR: 7.6,  spread: 0.38 },
-  { id:"communities", label:"Communities",      radius: 264, nodeR: 6.8,  spread: 0.30 }
+  {
+    "id": "adcom",
+    "label": "AdCom",
+    "radius": 48,
+    "nodeR": 9.6,
+    "spread": 0.8
+  },
+  {
+    "id": "chairs",
+    "label": "Committee Chairs",
+    "radius": 124,
+    "nodeR": 8.6,
+    "spread": 0.54
+  },
+  {
+    "id": "committee",
+    "label": "Committee",
+    "radius": 196,
+    "nodeR": 7.6,
+    "spread": 0.38
+  },
+  {
+    "id": "communities",
+    "label": "Communities",
+    "radius": 264,
+    "nodeR": 6.8,
+    "spread": 0.3
+  }
 ];
-
-/* ── 1. AdCom ─────────────────────────────────────────────────────────────
-   The innermost shell. Chairs link to ALL of these, so the core reads as a
-   body rather than implying a personal reporting line to one member.        */
-const ADCOM = [
-  { id:"ad1", role:"AdCom member 1", name:"", photo:"" },
-  { id:"ad2", role:"AdCom member 2", name:"", photo:"" },
-  { id:"ad3", role:"AdCom member 3", name:"", photo:"" }
-];
-
-/* ── 2. Committees ────────────────────────────────────────────────────────
-   One row per chair. `members` is how many seats that committee has on the
-   third shell; `communities` is how many affiliated (non-CBTA) groups hang
-   off it on the fourth. Change the numbers — that is the whole edit.
-   Treasurer is a standing role with no committee beneath it, hence 0 / 0.   */
-const COMMITTEES = [
-  { chair:"PreferCom Chair",    short:"PreferCom",    members: 4, communities: 2 },
-  { chair:"HAG Chair",          short:"HAG",          members: 4, communities: 2 },
-  { chair:"RGC Chair",          short:"RGC",          members: 4, communities: 2 },
-  { chair:"Treasurer",          short:"Treasurer",    members: 0, communities: 0 },
-  { chair:"SocCom Chair",       short:"SocCom",       members: 4, communities: 2 },
-  { chair:"OCom Chair",         short:"OCom",         members: 4, communities: 2 },
-  { chair:"InterNunnian Chair", short:"InterNunnian", members: 4, communities: 2 },
-  { chair:"AcAff Chair",        short:"AcAff",        members: 4, communities: 2 }
-];
-
-/* Placeholder copy. These are prompts, not claims — nothing here asserts
-   anything about a real person. Replace as profiles come in.
-   There is deliberately no separate summary field: "Responsibilities" below
-   carries the description, so the same content isn't asked for twice.       */
-
-/* The heading above the label/value list in the detail panel. */
 const DETAIL_HEADING = "Role detail";
-
-/* The rows in that list. Add, remove, or rename freely — the panel, the CSV
-   export, and the list view all follow whatever you put here. Values are the
-   "—" placeholders; fill them in per person, or leave them and edit the
-   exported CSV in a spreadsheet instead. */
-const TODO_FIELDS = () => [
-  ["Responsibilities",   "—"],
-  ["Current priorities", "—"],
-  ["Deliverables",       "—"],
-  ["Timeline",           "—"],
-  ["Needs",              "—"]
+const TODO_FIELDS = () => [["Responsibilities","—"],["Current priorities","—"],["Deliverables","—"],["Timeline","—"],["Needs","—"]];
+const ROSTER = [
+ {
+  "id": "ad1",
+  "tier": "adcom",
+  "role": "AdCom member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AdCom"
+  ]
+ },
+ {
+  "id": "ad2",
+  "tier": "adcom",
+  "role": "AdCom member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AdCom"
+  ]
+ },
+ {
+  "id": "ad3",
+  "tier": "adcom",
+  "role": "AdCom member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AdCom"
+  ]
+ },
+ {
+  "id": "ch1",
+  "tier": "chairs",
+  "role": "PreferCom Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch1m1",
+  "tier": "committee",
+  "role": "PreferCom member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "your name",
+    "Vaughn"
+   ],
+   [
+    "Responsibilities",
+    "Send AdCom and Staff progress updates;\nCommunicate official application to CBTA staff;\nEnsure official application draft is consistent with the version that is dispersed;\nCommunicate interview schedule to interviewees;\nInform CBC and Dorittya of preferred candidates;\nCommunicate results to applicants"
+   ],
+   [
+    "Current priorities",
+    "workshop interview questions"
+   ],
+   [
+    "Deliverables",
+    "Spring Calendar"
+   ],
+   [
+    "Timeline",
+    "8/18 meeting"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom"
+  ]
+ },
+ {
+  "id": "ch1m2",
+  "tier": "committee",
+  "role": "PreferCom member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "your name",
+    "Elliot"
+   ],
+   [
+    "Responsibilities",
+    "Create outreach plan;\nEnsure application is accessible on website;\nAdvertise the various scholarships to students;\nAdvertise faculty fellowship to Ithaca community;\nSend emails to Cornell departments;\nCoordinate open houses."
+   ],
+   [
+    "Current priorities",
+    "Review Rudolph Roidney's application"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "8/18 meeting"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom"
+  ]
+ },
+ {
+  "id": "ch1m3",
+  "tier": "committee",
+  "role": "PreferCom member 3",
+  "name": "Daeden",
+  "photo": "data:image/jpeg;base64,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",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "your name",
+    "Daeden"
+   ],
+   [
+    "Responsibilities",
+    "Create outreach plan;\nEnsure application is accessible on website;\nAdvertise the various scholarships to students;\nAdvertise faculty fellowship to Ithaca community;\nSend emails to Cornell departments;\nCoordinate open houses."
+   ],
+   [
+    "Current priorities",
+    "Edit Preferment Guidebook"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "8/18 meeting"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom"
+  ]
+ },
+ {
+  "id": "ch1m4",
+  "tier": "committee",
+  "role": "PreferCom member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Update CHEF slides;\nCreate meeting plan;\nInform team of the meeting plan;\nCreate reader & interview sheet documents for cut and preferment meetings;\nOrder refreshments for cut and preferment meetings."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom"
+  ]
+ },
+ {
+  "id": "ch1c1",
+  "tier": "communities",
+  "role": "PreferCom affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "your name",
+    "CEU Community (Dorittya)"
+   ],
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch1c2",
+  "tier": "communities",
+  "role": "PreferCom affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch1"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "your name",
+    "Ithaca writ large"
+   ],
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "PreferCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch2",
+  "tier": "chairs",
+  "role": "HAG Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch2m1",
+  "tier": "committee",
+  "role": "HAG member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG"
+  ]
+ },
+ {
+  "id": "ch2m2",
+  "tier": "committee",
+  "role": "HAG member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG"
+  ]
+ },
+ {
+  "id": "ch2m3",
+  "tier": "committee",
+  "role": "HAG member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG"
+  ]
+ },
+ {
+  "id": "ch2m4",
+  "tier": "committee",
+  "role": "HAG member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG"
+  ]
+ },
+ {
+  "id": "ch2c1",
+  "tier": "communities",
+  "role": "HAG affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch2c2",
+  "tier": "communities",
+  "role": "HAG affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch2"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "HAG",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch3",
+  "tier": "chairs",
+  "role": "RGC Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch3m1",
+  "tier": "committee",
+  "role": "RGC member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC"
+  ]
+ },
+ {
+  "id": "ch3m2",
+  "tier": "committee",
+  "role": "RGC member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC"
+  ]
+ },
+ {
+  "id": "ch3m3",
+  "tier": "committee",
+  "role": "RGC member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC"
+  ]
+ },
+ {
+  "id": "ch3m4",
+  "tier": "committee",
+  "role": "RGC member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC"
+  ]
+ },
+ {
+  "id": "ch3c1",
+  "tier": "communities",
+  "role": "RGC affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch3c2",
+  "tier": "communities",
+  "role": "RGC affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch3"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "RGC",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch4",
+  "tier": "chairs",
+  "role": "Treasurer",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "Treasurer",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch5",
+  "tier": "chairs",
+  "role": "SocCom Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch5m1",
+  "tier": "committee",
+  "role": "SocCom member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom"
+  ]
+ },
+ {
+  "id": "ch5m2",
+  "tier": "committee",
+  "role": "SocCom member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom"
+  ]
+ },
+ {
+  "id": "ch5m3",
+  "tier": "committee",
+  "role": "SocCom member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom"
+  ]
+ },
+ {
+  "id": "ch5m4",
+  "tier": "committee",
+  "role": "SocCom member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom"
+  ]
+ },
+ {
+  "id": "ch5c1",
+  "tier": "communities",
+  "role": "SocCom affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch5c2",
+  "tier": "communities",
+  "role": "SocCom affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch5"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "SocCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch6",
+  "tier": "chairs",
+  "role": "OCom Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch6m1",
+  "tier": "committee",
+  "role": "OCom member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom"
+  ]
+ },
+ {
+  "id": "ch6m2",
+  "tier": "committee",
+  "role": "OCom member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom"
+  ]
+ },
+ {
+  "id": "ch6m3",
+  "tier": "committee",
+  "role": "OCom member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom"
+  ]
+ },
+ {
+  "id": "ch6m4",
+  "tier": "committee",
+  "role": "OCom member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom"
+  ]
+ },
+ {
+  "id": "ch6c1",
+  "tier": "communities",
+  "role": "OCom affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch6c2",
+  "tier": "communities",
+  "role": "OCom affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch6"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "OCom",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch7",
+  "tier": "chairs",
+  "role": "InterNunnian Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch7m1",
+  "tier": "committee",
+  "role": "InterNunnian member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian"
+  ]
+ },
+ {
+  "id": "ch7m2",
+  "tier": "committee",
+  "role": "InterNunnian member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian"
+  ]
+ },
+ {
+  "id": "ch7m3",
+  "tier": "committee",
+  "role": "InterNunnian member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian"
+  ]
+ },
+ {
+  "id": "ch7m4",
+  "tier": "committee",
+  "role": "InterNunnian member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian"
+  ]
+ },
+ {
+  "id": "ch7c1",
+  "tier": "communities",
+  "role": "InterNunnian affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch7c2",
+  "tier": "communities",
+  "role": "InterNunnian affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch7"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "InterNunnian",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch8",
+  "tier": "chairs",
+  "role": "AcAff Chair",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ad1",
+   "ad2",
+   "ad3"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff",
+   "Chair"
+  ]
+ },
+ {
+  "id": "ch8m1",
+  "tier": "committee",
+  "role": "AcAff member 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff"
+  ]
+ },
+ {
+  "id": "ch8m2",
+  "tier": "committee",
+  "role": "AcAff member 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff"
+  ]
+ },
+ {
+  "id": "ch8m3",
+  "tier": "committee",
+  "role": "AcAff member 3",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff"
+  ]
+ },
+ {
+  "id": "ch8m4",
+  "tier": "committee",
+  "role": "AcAff member 4",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "—"
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff"
+  ]
+ },
+ {
+  "id": "ch8c1",
+  "tier": "communities",
+  "role": "AcAff affiliated community 1",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff",
+   "Affiliated"
+  ]
+ },
+ {
+  "id": "ch8c2",
+  "tier": "communities",
+  "role": "AcAff affiliated community 2",
+  "name": "",
+  "photo": "",
+  "reportsTo": [
+   "ch8"
+  ],
+  "kind": "group",
+  "blurb": "",
+  "fields": [
+   [
+    "Responsibilities",
+    "Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."
+   ],
+   [
+    "Current priorities",
+    "—"
+   ],
+   [
+    "Deliverables",
+    "—"
+   ],
+   [
+    "Timeline",
+    "—"
+   ],
+   [
+    "Needs",
+    "—"
+   ]
+  ],
+  "tags": [
+   "AcAff",
+   "Affiliated"
+  ]
+ }
 ];
-
-/* ── 3. Roster ────────────────────────────────────────────────────────────
-   Built from the two tables above. Each entry supports:
-     id, tier, role, name, photo (URL / path / data: URI),
-     reportsTo (an id, or an array of ids), kind ("group" draws a hexagon
-     instead of a circle), blurb, fields [[label,value],…], tags […]
-   To hand-write rows instead, delete this builder and push objects directly.
-   Or skip code entirely: press CSV to export a template, edit, press Import. */
-const ROSTER = [];
-const ADCOM_IDS = ADCOM.map(a => a.id);
-
-ADCOM.forEach(a => ROSTER.push({
-  ...a, tier:"adcom", blurb: "", fields: TODO_FIELDS(),
-  tags:["AdCom"]
-}));
-
-COMMITTEES.forEach((c, ci) => {
-  const chairId = "ch" + (ci + 1);
-  ROSTER.push({
-    id: chairId, tier:"chairs", role: c.chair, name:"", photo:"",
-    reportsTo: ADCOM_IDS,                      // answers to AdCom as a body
-    blurb: "", fields: TODO_FIELDS(), tags:[c.short, "Chair"]
-  });
-  for (let i = 1; i <= c.members; i++) {
-    ROSTER.push({
-      id: chairId + "m" + i, tier:"committee", role: c.short + " member " + i,
-      name:"", photo:"", reportsTo: chairId,
-      blurb: "", fields: TODO_FIELDS(), tags:[c.short]
-    });
-  }
-  for (let j = 1; j <= c.communities; j++) {
-    ROSTER.push({
-      id: chairId + "c" + j, tier:"communities",
-      role: c.short + " affiliated community " + j,
-      name:"", photo:"", reportsTo: chairId, kind:"group",
-      blurb: "",
-      fields: [["Responsibilities","Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."],
-               ["Current priorities","—"],["Deliverables","—"],["Timeline","—"],["Needs","—"]],
-      tags:[c.short, "Affiliated"]
-    });
-  }
-});
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Committee Sphere</title>
@@ -328,28 +2252,80 @@ COMMITTEES.forEach((c, ci) => {
   #nowebgl{display:none; position:fixed; inset:0; z-index:30; place-items:center; padding:30px; text-align:center; background:var(--plane)}
   .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
 </style>
-</head>
-<body>
+<style type="text/css">.float-tooltip-kap {
+  position: absolute;
+  width: max-content; /* prevent shrinking near right edge */
+  max-width: max(50%, 150px);
+  padding: 3px 5px;
+  border-radius: 3px;
+  font: 12px sans-serif;
+  color: #eee;
+  background: rgba(0,0,0,0.6);
+  pointer-events: none;
+}
+</style><style type="text/css">.scene-nav-info {
+  position: absolute;
+  bottom: 5px;
+  width: 100%;
+  text-align: center;
+  color: slategrey;
+  opacity: 0.7;
+  font-size: 10px;
+  font-family: sans-serif;
+  pointer-events: none;
+  user-select: none;
+}
 
-<div id="stage"><div id="graph"></div></div>
+.scene-container canvas:focus {
+  outline: none;
+}</style><style type="text/css">.graph-info-msg {
+  top: 50%;
+  width: 100%;
+  text-align: center;
+  color: lavender;
+  opacity: 0.7;
+  font-size: 22px;
+  position: absolute;
+  font-family: Sans-serif;
+}
+
+.scene-container .clickable {
+  cursor: pointer;
+}
+
+.scene-container .grabbable {
+  cursor: move;
+  cursor: grab;
+  cursor: -moz-grab;
+  cursor: -webkit-grab;
+}
+
+.scene-container .grabbable:active {
+  cursor: grabbing;
+  cursor: -moz-grabbing;
+  cursor: -webkit-grabbing;
+}</style></head>
+<body class="">
+
+<div id="stage"><div id="graph" style=""></div></div>
 
 <div class="bar" id="topleft">
   <div>
     <h1 id="app-title">Committee Sphere</h1>
     <p class="sub" id="app-sub">Drag to rotate · scroll to zoom · click a face</p>
   </div>
-  <span class="demo-badge" id="demo-badge">Demo roster</span>
-  <button class="status" id="status" hidden title="Click to re-read the sheet now"></button>
+  <span class="demo-badge" id="demo-badge" style="display: none;">Demo roster</span>
+  <button class="status live" id="status" title="53 row(s) applied">Live · updated 3 min ago</button>
 </div>
 
 <div class="bar" id="topright">
   <input id="search" type="search" placeholder="Search" aria-label="Search roles and names">
-  <button class="btn" id="btn-rotate" aria-pressed="true" title="Toggle auto-rotation">Rotate</button>
+  <button class="btn" id="btn-rotate" aria-pressed="false" title="Toggle auto-rotation">Rotate</button>
   <button class="btn" id="btn-labels" aria-pressed="true" title="Toggle the lines between tiers">Links</button>
   <button class="btn" id="btn-table" title="Read the whole roster as text">List</button>
-  <button class="btn" id="btn-theme" title="Toggle light/dark">Light</button>
+  <button class="btn" id="btn-theme" title="Toggle light/dark">Dark</button>
   <button class="btn" id="btn-manage" title="Sheet, photos, exports — for whoever maintains this">Manage</button>
-  <input type="file" id="file" accept=".csv,.json,text/csv,application/json" multiple hidden>
+  <input type="file" id="file" accept=".csv,.json,text/csv,application/json" multiple="" hidden="">
 </div>
 
 <div id="legend">
@@ -363,21 +2339,21 @@ COMMITTEES.forEach((c, ci) => {
   <div id="panel-body"></div>
 </aside>
 
-<div id="tableview" role="region" aria-label="Roster list view">
+<div id="tableview" role="region" aria-label="Roster list view" class="">
   <button class="btn close" id="table-close">Close list</button>
   <h2>Full roster</h2>
   <p class="sub">Every role in the sphere, as text. Colour is never the only cue.</p>
   <div id="table-wrap"></div>
 </div>
 
-<div id="sheet-modal" hidden role="dialog" aria-modal="true" aria-labelledby="sm-title">
+<div id="sheet-modal" role="dialog" aria-modal="true" aria-labelledby="sm-title">
   <div class="sm-box">
     <button class="btn sm-x" id="sm-close" aria-label="Close">Close</button>
     <h2 id="sm-title">Manage</h2>
     <p class="sm-sub">Nothing here is needed to view the sphere. This is for whoever looks after it.</p>
 
     <h3 class="sm-h3">Live Google Sheet</h3>
-    <p class="sm-state" id="sm-state">Not connected.</p>
+    <p class="sm-state" id="sm-state">Connected. Last read succeeded.</p>
     <ol class="sm-steps">
       <li><strong>Download starter sheet</strong> below, then import that CSV into a new Google Sheet
           (<em>File → Import → Replace current sheet</em>). Keep it in a Shared Drive.</li>
@@ -386,14 +2362,13 @@ COMMITTEES.forEach((c, ci) => {
       <li>Paste that link below and press <strong>Test and connect</strong>.</li>
     </ol>
     <label for="sm-url">Published CSV link</label>
-    <input type="url" id="sm-url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"
-           spellcheck="false" autocomplete="off">
-    <p class="sm-msg" id="sm-msg"></p>
+    <input type="url" id="sm-url" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv" spellcheck="false" autocomplete="off">
+    <p class="sm-msg " id="sm-msg"></p>
     <div class="sm-actions">
       <button class="btn primary" id="sm-connect">Test and connect</button>
-      <button class="btn" id="sm-refresh" hidden>Refresh now</button>
+      <button class="btn" id="sm-refresh">Refresh now</button>
       <button class="btn" id="sm-template">Download starter sheet</button>
-      <button class="btn" id="sm-disconnect" hidden>Disconnect</button>
+      <button class="btn" id="sm-disconnect">Disconnect</button>
     </div>
 
     <h3 class="sm-h3">Photos</h3>
@@ -6634,5 +8609,6 @@ if (!hasWebGL()) {
 }
 
 </script>
-</body>
-</html>
+
+
+</body></html>
