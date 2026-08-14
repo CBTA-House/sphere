@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Update your role</title>
+<script>/* __SPHERE_DATA__ */
+/* ══════════════════════════════════════════════════════════════════════════
+   ▼▼▼  EDIT BELOW  ▼▼▼
+   This block is the whole editable surface. Change it, save, reopen the file
+   in a browser — that is the entire loop. Nothing else needs touching, and
+   everything further down (the stylesheet, the markup, one very long minified
+   library line, the engine) can be ignored.
+
+   Prefer a spreadsheet? Press CSV in the app to download the current roster,
+   edit it in Excel or Sheets, then press Import. That path never touches code,
+   but it cannot change the four constants directly below — only the rows.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 0. Live data source (optional) ───────────────────────────────────────
+   Paste the "publish to web" CSV link of your Google Sheet here and the sphere
+   will pull role detail from it every time someone opens the page. Leave it as
+   "" and the sphere just uses the roster built below.
+
+   In the Sheet:  File → Share → Publish to web → pick the tab → CSV → Publish.
+   Columns: `id` is the key and must match the roster. `role` is there so humans
+   can find their row. `name` and `photo` are optional. EVERY OTHER COLUMN
+   becomes a detail row in the panel, in column order — so adding a field is a
+   spreadsheet column, not a code change.
+   Or just press the "Sheet" button in the app — it does all of this for you.   */
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEk2FxVe3BF8ESNmra97OZ10g1O7WiJy8yDmbasDCcFrGtwxb5_gRtmAmMQTWTXhcDfg02_qXGt2B2/pub?output=csv";
+
+/* How often to re-check the sheet while the page is open, in minutes. 0 = never. */
+const SHEET_REFRESH_MINUTES = 5;
+
+/* Tier shells, innermost first. `radius` = distance from centre,
+   `nodeR` = disc size, `spread` = how tightly children fan under a parent.
+   Colours are set in the CSS block at the top (--t0 … --t3). */
+const TIERS = [
+  { id:"adcom",       label:"AdCom",            radius: 48,  nodeR: 9.6,  spread: 0.80 },
+  { id:"chairs",      label:"Committee Chairs", radius: 124, nodeR: 8.6,  spread: 0.54 },
+  { id:"committee",   label:"Committee",        radius: 196, nodeR: 7.6,  spread: 0.38 },
+  { id:"communities", label:"Communities",      radius: 264, nodeR: 6.8,  spread: 0.30 }
+];
+
+/* ── 1. AdCom ─────────────────────────────────────────────────────────────
+   The innermost shell. Chairs link to ALL of these, so the core reads as a
+   body rather than implying a personal reporting line to one member.        */
+const ADCOM = [
+  { id:"ad1", role:"AdCom member 1", name:"", photo:"" },
+  { id:"ad2", role:"AdCom member 2", name:"", photo:"" },
+  { id:"ad3", role:"AdCom member 3", name:"", photo:"" }
+];
+
+/* ── 2. Committees ────────────────────────────────────────────────────────
+   One row per chair. `members` is how many seats that committee has on the
+   third shell; `communities` is how many affiliated (non-CBTA) groups hang
+   off it on the fourth. Change the numbers — that is the whole edit.
+   Treasurer is a standing role with no committee beneath it, hence 0 / 0.   */
+const COMMITTEES = [
+  { chair:"PreferCom Chair",    short:"PreferCom",    members: 4, communities: 2 },
+  { chair:"HAG Chair",          short:"HAG",          members: 4, communities: 2 },
+  { chair:"RGC Chair",          short:"RGC",          members: 4, communities: 2 },
+  { chair:"Treasurer",          short:"Treasurer",    members: 0, communities: 0 },
+  { chair:"SocCom Chair",       short:"SocCom",       members: 4, communities: 2 },
+  { chair:"OCom Chair",         short:"OCom",         members: 4, communities: 2 },
+  { chair:"InterNunnian Chair", short:"InterNunnian", members: 4, communities: 2 },
+  { chair:"AcAff Chair",        short:"AcAff",        members: 4, communities: 2 }
+];
+
+/* Placeholder copy. These are prompts, not claims — nothing here asserts
+   anything about a real person. Replace as profiles come in.
+   There is deliberately no separate summary field: "Responsibilities" below
+   carries the description, so the same content isn't asked for twice.       */
+
+/* The heading above the label/value list in the detail panel. */
+const DETAIL_HEADING = "Role detail";
+
+/* The rows in that list. Add, remove, or rename freely — the panel, the CSV
+   export, and the list view all follow whatever you put here. Values are the
+   "—" placeholders; fill them in per person, or leave them and edit the
+   exported CSV in a spreadsheet instead. */
+const TODO_FIELDS = () => [
+  ["Responsibilities",   "—"],
+  ["Current priorities", "—"],
+  ["Deliverables",       "—"],
+  ["Timeline",           "—"],
+  ["Needs",              "—"]
+];
+
+/* ── 3. Roster ────────────────────────────────────────────────────────────
+   Built from the two tables above. Each entry supports:
+     id, tier, role, name, photo (URL / path / data: URI),
+     reportsTo (an id, or an array of ids), kind ("group" draws a hexagon
+     instead of a circle), blurb, fields [[label,value],…], tags […]
+   To hand-write rows instead, delete this builder and push objects directly.
+   Or skip code entirely: press CSV to export a template, edit, press Import. */
+const ROSTER = [];
+const ADCOM_IDS = ADCOM.map(a => a.id);
+
+ADCOM.forEach(a => ROSTER.push({
+  ...a, tier:"adcom", blurb: "", fields: TODO_FIELDS(),
+  tags:["AdCom"]
+}));
+
+COMMITTEES.forEach((c, ci) => {
+  const chairId = "ch" + (ci + 1);
+  ROSTER.push({
+    id: chairId, tier:"chairs", role: c.chair, name:"", photo:"",
+    reportsTo: ADCOM_IDS,                      // answers to AdCom as a body
+    blurb: "", fields: TODO_FIELDS(), tags:[c.short, "Chair"]
+  });
+  for (let i = 1; i <= c.members; i++) {
+    ROSTER.push({
+      id: chairId + "m" + i, tier:"committee", role: c.short + " member " + i,
+      name:"", photo:"", reportsTo: chairId,
+      blurb: "", fields: TODO_FIELDS(), tags:[c.short]
+    });
+  }
+  for (let j = 1; j <= c.communities; j++) {
+    ROSTER.push({
+      id: chairId + "c" + j, tier:"communities",
+      role: c.short + " affiliated community " + j,
+      name:"", photo:"", reportsTo: chairId, kind:"group",
+      blurb: "",
+      fields: [["Responsibilities","Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."],
+               ["Current priorities","—"],["Deliverables","—"],["Timeline","—"],["Needs","—"]],
+      tags:[c.short, "Affiliated"]
+    });
+  }
+});
+</script>
+<style>
+  :root{
+    --surface:#1a1a19; --plane:#0d0d0d; --card:#232322;
+    --ink:#fff; --ink-2:#c3c2b7; --ink-muted:#898781;
+    --hairline:rgba(255,255,255,.12); --field:rgba(255,255,255,.05);
+    --t0:#c08a4a; --t1:#f5d033; --t2:#7cc576; --t3:#2a7d4f; --focus:#3987e5;
+  }
+  html[data-theme="light"]{
+    --surface:#fcfcfb; --plane:#f4f4f1; --card:#fff;
+    --ink:#0b0b0b; --ink-2:#52514e; --ink-muted:#898781;
+    --hairline:rgba(11,11,11,.12); --field:rgba(11,11,11,.04);
+    --t0:#8a5a2b; --t1:#c2a11c; --t2:#0f9d58; --t3:#0b3d20; --focus:#2a78d6;
+  }
+  *{box-sizing:border-box}
+  /* A class with display: set beats the UA sheet's [hidden] rule, so anything
+     using the hidden attribute silently stays visible. Force it. */
+  [hidden]{display:none !important}
+  body{margin:0; background:var(--plane); color:var(--ink); padding:28px 20px 70px;
+    font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px; margin:0 auto; display:grid; grid-template-columns:1fr 330px; gap:26px; align-items:start}
+  @media (max-width:860px){ .wrap{grid-template-columns:1fr} }
+  header{grid-column:1/-1; margin-bottom:2px}
+  h1{font-size:23px; margin:0 0 4px; letter-spacing:-.015em}
+  .lede{color:var(--ink-2); margin:0; max-width:62ch; font-size:14px}
+  .card{background:var(--card); border:1px solid var(--hairline); border-radius:12px; padding:20px}
+  .step{margin-bottom:22px}
+  .step:last-child{margin-bottom:0}
+  label{display:block; font-size:12.5px; font-weight:620; margin-bottom:6px; letter-spacing:.005em}
+  .hint{font-size:12px; color:var(--ink-muted); font-weight:400; margin:-3px 0 7px}
+  input[type=text], select, textarea{
+    width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--field);
+    border:1px solid var(--hairline); border-radius:8px; padding:9px 11px; resize:vertical}
+  textarea{min-height:62px; line-height:1.5}
+  select{cursor:pointer}
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible{
+    outline:2px solid var(--focus); outline-offset:1px}
+  .num{display:inline-flex; width:20px; height:20px; border-radius:50%; background:var(--field);
+    border:1px solid var(--hairline); align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; margin-right:8px; color:var(--ink-2)}
+  h2{font-size:14.5px; margin:0 0 3px; font-weight:640; display:flex; align-items:center}
+  #drop{border:1.5px dashed var(--hairline); border-radius:10px; padding:20px; text-align:center;
+    cursor:pointer; transition:border-color .15s, background .15s}
+  #drop:hover, #drop.over{border-color:var(--focus); background:var(--field)}
+  #drop p{margin:0; font-size:13px; color:var(--ink-2)}
+  #drop .big{font-size:14px; color:var(--ink); font-weight:600; margin-bottom:3px}
+  .photo-row{display:flex; gap:14px; align-items:center; margin-top:12px}
+  .btn{appearance:none; font:inherit; font-size:13.5px; font-weight:560; cursor:pointer;
+    border:1px solid var(--hairline); background:var(--field); color:var(--ink);
+    padding:9px 15px; border-radius:8px}
+  .btn:hover{border-color:var(--ink-muted)}
+  .btn.primary{background:var(--focus); border-color:var(--focus); color:#fff; font-weight:620}
+  .btn.primary:disabled{opacity:.45; cursor:not-allowed}
+  .btn.sm{padding:5px 10px; font-size:12.5px}
+  /* preview */
+  aside{position:sticky; top:28px}
+  .pv-title{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-muted); font-weight:660; margin:0 0 10px}
+  .node-stage{background:var(--surface); border:1px solid var(--hairline); border-radius:10px;
+    height:150px; display:grid; place-items:center; margin-bottom:14px}
+  .node{width:96px; height:96px; border-radius:50%; background:var(--field);
+    display:grid; place-items:center; font-size:30px; font-weight:660; overflow:hidden;
+    background-size:cover; background-position:center}
+  .node.hex{border-radius:6px; clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .pv-role{font-size:16px; font-weight:650; margin:0; letter-spacing:-.01em}
+  .pv-name{font-size:13px; color:var(--ink-2); margin:2px 0 0}
+  .chip{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:20px; background:var(--field); border:1px solid var(--hairline); margin-top:8px}
+  .dot{width:9px; height:9px; border-radius:50%}
+  .dot.hex{border-radius:1px; clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+  .pv-blurb{font-size:13px; color:var(--ink-2); margin:13px 0 0; line-height:1.55}
+  .pv-sect{font-size:10.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-muted);
+    font-weight:660; margin:15px 0 8px; padding-top:13px; border-top:1px solid var(--hairline)}
+  dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:6px 12px; font-size:12.5px}
+  dt{color:var(--ink-muted)} dd{margin:0}
+  dt.long{grid-column:1/-1; margin-top:3px} dd.long{grid-column:1/-1; color:var(--ink-2); margin-bottom:5px}
+  .done{margin-top:18px; padding-top:16px; border-top:1px solid var(--hairline)}
+  .size{font-size:12px; color:var(--ink-muted); margin:9px 0 0}
+  .privacy{font-size:12.5px; color:var(--ink-2); background:var(--field);
+    border:1px solid var(--hairline); border-left:3px solid var(--t2);
+    border-radius:0 8px 8px 0; padding:10px 13px; margin:0 0 18px}
+  .warn{color:#fab219}
+  #theme{position:fixed; top:18px; right:18px}
+</style>
+</head>
+<body>
+<button class="btn sm" id="theme">Light</button>
+<div class="wrap">
+  <header>
+    <h1>Update your role</h1>
+    <p class="lede">Fill this in, download the small file it produces, and send it back. It gets merged into the committee sphere.</p>
+  </header>
+
+  <main class="card">
+    <p class="privacy"><strong>Your photo never leaves this computer.</strong> It is resized and packaged inside the file you download — nothing is uploaded anywhere, and this page works with your wi-fi off.</p>
+
+    <div class="step">
+      <h2><span class="num">1</span>Which role are you?</h2>
+      <p class="hint">Pick the seat you hold. If yours is missing, tell whoever sent you this.</p>
+      <select id="role"><option value="">— choose your role —</option></select>
+    </div>
+
+    <div class="step">
+      <h2><span class="num">2</span>Your name</h2>
+      <p class="hint">Optional. Shown under the role title.</p>
+      <input type="text" id="name" placeholder="e.g. A. Okonkwo" autocomplete="name">
+    </div>
+
+    <div class="step">
+      <h2><span class="num">3</span>Your photo</h2>
+      <p class="hint">Any image. It gets cropped square and shrunk to 256px, so file size stays small.</p>
+      <div id="drop" tabindex="0" role="button" aria-label="Choose or drop a photo">
+        <p class="big">Drop a photo here</p><p>or click to choose one</p>
+      </div>
+      <input type="file" id="file" accept="image/*" hidden>
+      <div class="photo-row" id="photo-row" hidden>
+        <button class="btn sm" id="photo-clear">Remove photo</button>
+        <span class="size" id="photo-size"></span>
+      </div>
+    </div>
+
+    <div class="step" id="fields-step">
+      <h2><span class="num">4</span><span id="detail-heading">Role detail</span></h2>
+      <p class="hint">Leave any of these blank if they don't apply.</p>
+      <div id="fields"></div>
+    </div>
+
+    <div class="done">
+      <button class="btn primary" id="download" disabled>Download my card</button>
+      <button class="btn" id="copy">Copy as text</button>
+      <p class="size" id="out-size">Choose your role to continue.</p>
+    </div>
+  </main>
+
+  <aside>
+    <p class="pv-title">Live preview</p>
+    <div class="node-stage"><div class="node" id="pv-node">?</div></div>
+    <div class="card">
+      <h3 class="pv-role" id="pv-role">Your role</h3>
+      <p class="pv-name" id="pv-name" hidden></p>
+      <span class="chip" id="pv-chip"><span class="dot" id="pv-dot"></span><span id="pv-tier">Tier</span></span>
+      <p class="pv-sect" id="pv-fields-head" hidden>Role detail</p>
+      <dl id="pv-fields"></dl>
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const TIER_BY_ID = Object.fromEntries(TIERS.map((t,i)=>[t.id,Object.assign({index:i},t)]));
+const TIER_VAR = ["--t0","--t1","--t2","--t3"];
+const FIELD_LABELS = (typeof TODO_FIELDS === "function" ? TODO_FIELDS() : []).map(f => f[0]);
+const HEADING = typeof DETAIL_HEADING === "string" ? DETAIL_HEADING : "Role detail";
+const esc = s => String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+let photo = "";
+
+/* role picker, grouped by tier so a long list stays navigable */
+(function buildRoleList(){
+  const sel = $("#role");
+  TIERS.forEach(t => {
+    const rows = ROSTER.filter(r => r.tier === t.id);
+    if (!rows.length) return;
+    const g = document.createElement("optgroup");
+    g.label = t.label;
+    rows.forEach(r => {
+      const o = document.createElement("option");
+      o.value = r.id; o.textContent = r.role;
+      g.appendChild(o);
+    });
+    sel.appendChild(g);
+  });
+})();
+
+$("#detail-heading").textContent = HEADING;
+$("#pv-fields-head").textContent = HEADING;
+
+/* field inputs, generated from the same labels the sphere uses */
+// The first field is the descriptive one now that the summary is gone, so it
+// gets a taller box; the rest stay compact.
+$("#fields").innerHTML = FIELD_LABELS.map((l,i) =>
+  `<label for="f${i}" style="margin-top:${i?12:0}px">${esc(l)}</label>
+   <textarea id="f${i}" data-label="${esc(l)}" placeholder="${esc(l)}…"
+     style="min-height:${i===0?104:58}px"></textarea>`).join("");
+
+/* ── photo: centre-crop, downscale to 256, embed as a data URI ───────────── */
+const MAX = 256;
+function processPhoto(fileObj){
+  if (!fileObj || !/^image\//.test(fileObj.type)) { alert("That doesn't look like an image file."); return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.width, img.height);          // centre square crop
+      const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      const c = document.createElement("canvas");
+      c.width = c.height = MAX;
+      const g = c.getContext("2d");
+      g.imageSmoothingQuality = "high";
+      g.fillStyle = "#ffffff"; g.fillRect(0,0,MAX,MAX);       // matte, for transparent sources
+      g.drawImage(img, sx, sy, side, side, 0, 0, MAX, MAX);
+      // keep PNG only when the source actually uses transparency
+      let transparent = false;
+      if (/png|webp|gif|svg/.test(fileObj.type)) {
+        const t = document.createElement("canvas"); t.width = t.height = 64;
+        const tg = t.getContext("2d");
+        tg.drawImage(img, sx, sy, side, side, 0, 0, 64, 64);
+        const d = tg.getImageData(0,0,64,64).data;
+        for (let i=3;i<d.length;i+=4) if (d[i] < 250) { transparent = true; break; }
+      }
+      photo = transparent ? c.toDataURL("image/png") : c.toDataURL("image/jpeg", 0.82);
+      $("#photo-row").hidden = false;
+      $("#photo-size").textContent = Math.round(photo.length/1024) + " KB" + (transparent ? " (PNG)" : "");
+      render();
+    };
+    img.onerror = () => alert("Couldn't read that image. Try a JPG or PNG.");
+    img.src = reader.result;
+  };
+  reader.onerror = () => alert("Couldn't read that file.");
+  reader.readAsDataURL(fileObj);
+}
+const drop = $("#drop");
+drop.addEventListener("click", () => $("#file").click());
+drop.addEventListener("keydown", e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); $("#file").click(); } });
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => processPhoto(e.dataTransfer.files[0]));
+$("#file").addEventListener("change", e => { processPhoto(e.target.files[0]); e.target.value = ""; });
+$("#photo-clear").addEventListener("click", () => {
+  photo = ""; $("#photo-row").hidden = true; render();
+});
+
+/* ── card + preview ──────────────────────────────────────────────────────── */
+function initials(s){
+  const p = String(s||"").replace(/[^A-Za-z0-9 ]/g," ").trim().split(/\s+/).filter(Boolean);
+  if (!p.length) return "?";
+  return (p.length===1 ? p[0].slice(0,2) : p[0][0]+p[p.length-1][0]).toUpperCase();
+}
+function currentCard(){
+  const id = $("#role").value;
+  if (!id) return null;
+  const base = ROSTER.find(r => r.id === id) || {};
+  const fields = [...document.querySelectorAll("#fields textarea")]
+    .map(t => [t.dataset.label, t.value.trim()])
+    .filter(f => f[1] !== "");
+  return {
+    __type: "committee-sphere-card", v: 1,
+    id, role: base.role || "", tier: base.tier || "",
+    name: $("#name").value.trim(),
+    photo,
+    fields
+  };
+}
+function render(){
+  const c = currentCard();
+  const ok = !!c;
+  $("#download").disabled = !ok;
+  const tier = ok ? TIER_BY_ID[c.tier] : null;
+  const col = tier ? getComputedStyle(document.documentElement).getPropertyValue(TIER_VAR[tier.index]).trim() : "";
+  const isGroup = ok && tier && tier.index === TIERS.length - 1;
+
+  const node = $("#pv-node");
+  node.className = "node" + (isGroup ? " hex" : "");
+  node.style.boxShadow = col ? `0 0 0 4px ${col}` : "none";
+  if (photo) { node.style.backgroundImage = `url(${photo})`; node.textContent = ""; }
+  else { node.style.backgroundImage = "none"; node.textContent = ok ? initials(c.name || c.role) : "?"; }
+
+  $("#pv-role").textContent = ok ? c.role : "Your role";
+  $("#pv-name").textContent = ok ? c.name : "";
+  $("#pv-name").hidden = !(ok && c.name);
+  $("#pv-chip").hidden = !ok;
+  $("#pv-dot").className = "dot" + (isGroup ? " hex" : "");
+  $("#pv-dot").style.background = col;
+  $("#pv-tier").textContent = tier ? tier.label : "";
+  $("#pv-fields-head").hidden = !(ok && c.fields.length);
+  $("#pv-fields").innerHTML = ok ? c.fields.map(f => {
+    const long = String(f[1]).length > 90, k = long ? ' class="long"' : "";
+    return `<dt${k}>${esc(f[0])}</dt><dd${k}>${esc(f[1])}</dd>`;
+  }).join("") : "";
+
+  $("#out-size").textContent = !ok ? "Choose your role to continue."
+    : `Ready — about ${Math.max(1, Math.round(JSON.stringify(c).length/1024))} KB.`;
+}
+document.addEventListener("input", render);
+$("#role").addEventListener("change", render);
+
+/* ── output ──────────────────────────────────────────────────────────────── */
+function slug(s){ return String(s||"card").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+$("#download").addEventListener("click", () => {
+  const c = currentCard(); if (!c) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(c,null,1)], {type:"application/json"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = slug(c.role) + ".json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+});
+$("#copy").addEventListener("click", async () => {
+  const c = currentCard(); if (!c) return;
+  const text = [c.role, c.name && ("Name: "+c.name),
+    ...c.fields.map(f=>f[0]+": "+f[1])].filter(Boolean).join("\n");
+  try { await navigator.clipboard.writeText(text); $("#copy").textContent = "Copied"; }
+  catch(e){ $("#copy").textContent = "Copy failed"; }
+  setTimeout(()=>{ $("#copy").textContent = "Copy as text"; }, 1600);
+});
+
+$("#theme").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  $("#theme").textContent = next === "dark" ? "Light" : "Dark";
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
