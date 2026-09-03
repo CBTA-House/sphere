@@ -7,7 +7,7 @@
   "mcpServerNames": []
 }
 </script>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <!-- ══════════════════════════════════════════════════════════════════════
@@ -41,6 +41,12 @@
    spreadsheet column, not a code change.
    Or just press the "Sheet" button in the app — it does all of this for you.   */
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSEk2FxVe3BF8ESNmra97OZ10g1O7WiJy8yDmbasDCcFrGtwxb5_gRtmAmMQTWTXhcDfg02_qXGt2B2/pub?output=csv";
+
+/* Light or dark is the one setting that is NOT in this block: it is the
+   `data-theme` attribute on the <html> tag a few lines above, because a theme
+   applied from here would paint the other one for a frame first. Set it to
+   "light" or "dark". Visitors can still switch with the toolbar button, and
+   "Save file" bakes in whichever theme is showing when you save.            */
 
 /* Which view the page opens on: "sphere" or "flat". Both are always available
    from the toolbar; this only picks the landing view. A browser with WebGL
@@ -116,10 +122,9 @@ const TEXT = {
    flyMs        How long the words take to clear the screen.                  */
 const INTRO = {
   enabled:     true,
-  quote:       "[Students at Cornell should] find something that’s much more creative, "
-             + "much more collective [and] much more community oriented to do with "
-             + "[their] talents, efforts and opportunities.",
-  attribution: "Ed Whitfield",
+  quote:       "You have ~$17,000, 20 people mutually invested in collaborating "
+             + "with you, and at least 1 year. What will you do?",
+  attribution: "",
   source:      "",
   holdMs:      4000,
   flyMs:       950,
@@ -130,19 +135,19 @@ const INTRO = {
    The flat view puts a small orb at dead centre and gives AdCom a ring of its
    own, so the middle of the diagram is not a person and not a committee. A
    chair's line stops at the AdCom ring rather than at any one member, which is
-   the same "answers to the body" the sphere makes with distance.
-   Set `label` to "" to leave the orb unlabelled.                             */
-const CORE = {
-  label: "CBTA",
-  title: "The branch itself",
-  blurb: "Nothing reports to the centre and the centre reports to nothing. "
-       + "It holds the middle so that no person and no committee does \u2014 "
-       + "the work is what the rest of this is arranged around."
-};
+   the same "answers to the body" that the sphere makes with distance.
+
+   The orb is deliberately not a thing. It stands for nothing, holds nothing,
+   and cannot be clicked — it is there so the centre stays empty of people.
+   If you ever do want it named, put a word in `label`; leave it "" and the
+   orb sits there unlabelled.                                                 */
+const ORB = { label: "" };
 
 /* Tier shells, innermost first. `radius` = distance from centre,
    `nodeR` = disc size, `spread` = how tightly children fan under a parent.
    Colours are set in the CSS block at the top (--t0 … --t3). */
+/* Add `shell:false` to any tier to stop drawing its bubble in the 3D view.
+   The nodes stay exactly where they are — only the sphere around them goes. */
 const TIERS = [
   { id:"adcom",       label:"AdCom",            radius: 48,  nodeR: 9.6,  spread: 0.80 },
   { id:"chairs",      label:"Committee Chairs", radius: 124, nodeR: 8.6,  spread: 0.54 },
@@ -179,6 +184,15 @@ const COMMITTEES = [
    anything about a real person. Replace as profiles come in.
    There is deliberately no separate summary field: "Responsibilities" below
    carries the description, so the same content isn't asked for twice.       */
+
+/* Which committee member each affiliated community hangs off. A community is
+   worked with by a person, not by an office, so it branches from a member
+   rather than from the chair — and the member who holds that relationship is
+   the one you want named when someone asks who the contact is.
+   `1, 3` spreads two communities across a four-person committee. Add numbers
+   for committees with more. A number past the end of the committee falls back
+   to its last member; a committee with no members falls back to its chair.   */
+const COMMUNITY_HOSTS = [1, 3, 5, 7, 9, 11];
 
 /* The heading above the label/value list in the detail panel. */
 const DETAIL_HEADING = "Role detail";
@@ -225,12 +239,14 @@ COMMITTEES.forEach((c, ci) => {
     });
   }
   for (let j = 1; j <= c.communities; j++) {
+    const want = COMMUNITY_HOSTS[j - 1] || (2 * j - 1);
+    const host = c.members ? chairId + "m" + Math.min(want, c.members) : chairId;
     ROSTER.push({
       id: chairId + "c" + j, tier:"communities",
       role: c.short + " affiliated community " + j,
-      name:"", photo:"", reportsTo: chairId, kind:"group",
+      name:"", photo:"", reportsTo: host, kind:"group",
       blurb: "",
-      fields: [["Responsibilities","Affiliated (non-CBTA) community this committee works with — replace with the group's name and the nature of the working relationship."],
+      fields: [["Responsibilities","Affiliated (non-CBTA) community this committee works with — replace with the group's name, and say what the working relationship is. The member it hangs off is the person who holds it."],
                ["Current priorities","—"],["Deliverables","—"],["Timeline","—"],["Needs","—"]],
       tags:[c.short, "Affiliated"]
     });
@@ -466,9 +482,14 @@ const OVERRIDES = {};
   #flat .node circle:not(.hit),#flat .node polygon{stroke:rgba(255,255,255,.22); stroke-width:1}
   html[data-theme="light"] #flat .node circle:not(.hit),
   html[data-theme="light"] #flat .node polygon{stroke:rgba(11,11,11,.25)}
-  #flat .node .hit,#flat #orb .hit{fill:transparent; stroke:none; pointer-events:all}
+  #flat .node .hit{fill:transparent; stroke:none; pointer-events:all}
   #flat .halo{fill:none; stroke-width:2.4; opacity:0}
   #flat .node.sel .halo{opacity:.9}
+  /* A node's box includes its oversized invisible hit target, so the browser's
+     own focus ring lands as a big rectangle nowhere near the dot. Suppress it
+     and reuse the halo — a tight ring on the dot itself — for keyboard focus. */
+  #flat .node:focus{outline:none}
+  #flat .node:focus-visible .halo{opacity:.9; stroke-dasharray:3 3}
   /* The knockout stroke is what lets a name sit on top of a spoke and stay
      readable without a box around it. */
   #flat .lbl{
@@ -485,21 +506,21 @@ const OVERRIDES = {};
   body.names-hover #flat .node.on .lbl{opacity:1}
   #flat .node,#flat .spoke,#flat .leader,#flat .lbl{transition:opacity .16s ease}
 
-  /* the orb: small, always moving, and connected to nothing */
-  #flat #orb{cursor:pointer}
-  #flat .orb-glow{animation:orb-breathe 7.5s ease-in-out infinite alternate}
-  #flat .orb-mist{animation:orb-drift 19s ease-in-out infinite alternate}
-  #flat .orb-arc-a{animation:orb-spin 34s linear infinite}
-  #flat .orb-arc-b{animation:orb-spin-r 23s linear infinite}
-  #flat .orb-core{animation:orb-pulse 4.6s ease-in-out infinite alternate}
-  @keyframes orb-breathe{ from{transform:scale(.92); opacity:.55} to{transform:scale(1.1); opacity:.9} }
-  @keyframes orb-drift{ from{transform:scale(1.06) rotate(0deg); opacity:.5}
-                        to{transform:scale(.9) rotate(40deg); opacity:.8} }
-  @keyframes orb-spin{ to{transform:rotate(360deg)} }
-  @keyframes orb-spin-r{ to{transform:rotate(-360deg)} }
-  @keyframes orb-pulse{ from{opacity:.82} to{opacity:1} }
+  /* the orb: connected to nothing and inert — a click that lands on it falls
+     through to the background and clears the selection, which is what empty
+     space should do. It churns rather than pulses: the shader frames are
+     flipped with steps(), and the painted fallback turns three cloud sheets
+     at three different rates. Neither one breathes. */
+  #flat #orb{pointer-events:none}
+  #flat .orb-strip{animation:orb-churn 26s steps(var(--orb-frames,24)) infinite}
+  @keyframes orb-churn{ to{ transform:translateX(calc(var(--orb-step) * var(--orb-frames,24))) } }
+  #flat .orb-cloud-a{animation:orb-turn 114s linear infinite}
+  #flat .orb-cloud-b{animation:orb-turn-r 74s linear infinite}
+  #flat .orb-cloud-c{animation:orb-turn 196s linear infinite}
+  @keyframes orb-turn{ to{ transform:rotate(360deg) } }
+  @keyframes orb-turn-r{ to{ transform:rotate(-360deg) } }
   @media (prefers-reduced-motion:reduce){
-    #flat .orb-glow,#flat .orb-mist,#flat .orb-arc-a,#flat .orb-arc-b,#flat .orb-core{animation:none}
+    #flat .orb-strip,#flat .orb-cloud-a,#flat .orb-cloud-b,#flat .orb-cloud-c{animation:none}
   }
 
   /* ---------- opening quote ---------- */
@@ -569,6 +590,8 @@ const OVERRIDES = {};
     font:400 clamp(11px,1.05vw,13px)/1.5 system-ui,-apple-system,sans-serif;
     animation:iw-in .7s cubic-bezier(.2,.7,.3,1) forwards;
   }
+  /* no attribution means no stray rule floating under the text */
+  #intro-by:empty{display:none}
   #intro-src:empty{display:none}
 
   /* The flyaway. A second keyframe set rather than a transition: swapping one
@@ -6362,23 +6385,35 @@ function buildShells() {
     shellGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
   }
   shellGroup = new THREE.Group();
+  const outerR = TIERS[TIERS.length - 1].radius || 1;
   TIERS.forEach((t, i) => {
+    if (t.shell === false) return;              // opted out in the config above
     const col = new THREE.Color(tierColor(t.id));
-    const fade = 1 - i * 0.09;
+    /* Skin and wireframe want opposite gradients. A small inner sphere
+       concentrates its fill into a bright disc, so the skin fades IN with
+       radius; a big outer sphere puts far more line length on screen, so the
+       wireframe fades OUT with radius. One shared fade got one of them wrong
+       whichever way it ran. */
+    const rel = t.radius / outerR;
+    const skinFade = 0.62 + 0.38 * rel;
+    const wireFade = 1.05 - 0.42 * rel;
     const skin = new THREE.Mesh(
       new THREE.SphereGeometry(t.radius, 44, 28),
       new THREE.MeshBasicMaterial({
         color: col, transparent: true, side: THREE.BackSide, depthWrite: false,
-        opacity: (PAL.dark ? 0.048 : 0.070) * fade,
+        opacity: (PAL.dark ? 0.050 : 0.072) * skinFade,
         // additive suits the dark plane (light on light); on white it would
         // only ever wash out, so there it composites normally
         blending: PAL.dark ? THREE.AdditiveBlending : THREE.NormalBlending
       }));
+    /* Segment count follows radius: a small sphere does not need many to look
+       round, and the innermost shell is drawn right where the orb lives, so
+       fewer + fainter lines there keeps it from being caged. */
     const wire = new THREE.LineSegments(
-      new THREE.WireframeGeometry(new THREE.SphereGeometry(t.radius, 26, 16)),
+      new THREE.WireframeGeometry(new THREE.SphereGeometry(t.radius, 14 + i * 6, 9 + i * 3)),
       new THREE.LineBasicMaterial({
         color: col, transparent: true, depthWrite: false,
-        opacity: (PAL.dark ? 0.115 : 0.185) * fade
+        opacity: (PAL.dark ? 0.125 : 0.185) * wireFade * (i === 0 ? 0.5 : 1)
       }));
     skin.userData.tier = wire.userData.tier = t.id;
     skin.renderOrder = wire.renderOrder = -10 + i;
@@ -6386,6 +6421,391 @@ function buildShells() {
   });
   graph.scene().add(shellGroup);
   syncShells();
+  buildOrb();          // rebuilt alongside the shells so it follows the theme
+}
+
+/* ── the orb at the centre ────────────────────────────────────────────────
+   The flat view puts a small orb where nothing reports and nothing is
+   reported to; the sphere needs the same thing, or its middle is just the
+   AdCom cluster again. It is not a graph node — force-graph raycasts only its
+   own nodes and links, so the orb cannot be hovered, clicked or selected, and
+   a click through it falls to the background exactly like empty space.
+
+   Everything is depth-tested, so an AdCom face in front of it occludes it
+   properly. The one thing that WAS in the way is the innermost shell's
+   wireframe, handled above.                                                  */
+/* ── painted fallback ──────────────────────────────────────────────────────
+   These canvases were the whole orb before it became a shader. Two jobs still
+   need them: the haze sprite standing in for the bloom pass we cannot have,
+   and the flat view when a second WebGL context is refused — which is exactly
+   the case where the flat view matters most, since a browser with no WebGL
+   lands there and nowhere else.
+   ──────────────────────────────────────────────────────────────────────── */
+/* Wispy cloud, masked to a soft sphere. `add` accumulates toward light, which
+   is right on the dark plane; on white the blobs have to darken instead. */
+function cloudCanvas(rgb, seed, add) {
+  const S = 256, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d"), h = S / 2, rnd = mulberry32(seed);
+  if (add) g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 240; i++) {
+    const a = rnd() * Math.PI * 2;
+    const r = Math.pow(rnd(), 0.5) * h * 0.95;
+    const x = h + Math.cos(a) * r, y = h + Math.sin(a) * r;
+    const rad = 5 + rnd() * 30;
+    const al = (add ? 0.05 : 0.055) + rnd() * (add ? 0.10 : 0.085);
+    const grd = g.createRadialGradient(x, y, 0, x, y, rad);
+    grd.addColorStop(0, "rgba(" + rgb + "," + al.toFixed(3) + ")");
+    grd.addColorStop(1, "rgba(" + rgb + ",0)");
+    g.fillStyle = grd;
+    g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill();
+  }
+  g.globalCompositeOperation = "destination-in";
+  const m = g.createRadialGradient(h, h, 0, h, h, h);
+  m.addColorStop(0.00, "rgba(0,0,0,1)");
+  m.addColorStop(0.70, "rgba(0,0,0,1)");
+  m.addColorStop(0.90, "rgba(0,0,0,0.45)");
+  m.addColorStop(1.00, "rgba(0,0,0,0)");
+  g.fillStyle = m; g.fillRect(0, 0, S, S);
+  return c;
+}
+
+/* The lit edge. Thin, brightest just inside the silhouette. */
+function rimCanvas(rgb, strength, soft) {
+  const S = 256, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d"), h = S / 2;
+  const grd = g.createRadialGradient(h, h, 0, h, h, h);
+  const col = a => "rgba(" + rgb + "," + a + ")";
+  /* On white a tight bright band reads as a drawn outline and turns the orb
+     into a marble, so the light plane gets a wider, gentler edge. */
+  grd.addColorStop(0.00, col(0));
+  grd.addColorStop(soft ? 0.50 : 0.66, col(0));
+  grd.addColorStop(soft ? 0.76 : 0.84, col(0.10 * strength));
+  grd.addColorStop(soft ? 0.91 : 0.945, col(strength));
+  grd.addColorStop(soft ? 0.975 : 0.985, col(0.30 * strength));
+  grd.addColorStop(1.00, col(0));
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  return c;
+}
+
+/* A soft bloom — no spikes. A starburst reads as a star; this is a pearl. */
+function bloomCanvas(rgb, tight) {
+  const S = 256, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d"), h = S / 2;
+  const col = a => "rgba(" + rgb + "," + a + ")";
+  const grd = g.createRadialGradient(h, h, 0, h, h, h);
+  grd.addColorStop(0.00, col(tight ? 0.95 : 0.55));
+  grd.addColorStop(0.10, col(tight ? 0.55 : 0.40));
+  grd.addColorStop(0.32, col(tight ? 0.16 : 0.20));
+  grd.addColorStop(0.68, col(tight ? 0.03 : 0.06));
+  grd.addColorStop(1.00, col(0));
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  return c;
+}
+
+/* Neutral on purpose. A tier colour here would say the centre is one of the
+   four things, which is the one thing it is not. */
+function orbPalette() {
+  return PAL.dark
+    ? { cloud: "214,228,255", rim: "236,243,255", core: "255,255,255",
+        haze: "168,196,255", add: true,
+        cloudOp: 0.62, rimOp: 0.74, coreOp: 0.85, hazeOp: 0.34 }
+    : { cloud: "126,131,178", rim: "92,97,146", core: "236,238,255",
+        haze: "138,144,190", add: false,
+        cloudOp: 0.72, rimOp: 0.40, coreOp: 0.60, hazeOp: 0.34 };
+}
+
+function orbCanvases() {
+  const P = orbPalette();
+  return {
+    P: P,
+    clouds: [cloudCanvas(P.cloud, 8112, P.add),
+             cloudCanvas(P.cloud, 20903, P.add),
+             cloudCanvas(P.cloud, 77341, P.add)],
+    rim: rimCanvas(P.rim, P.rimOp, !P.add),
+    core: bloomCanvas(P.core, true),
+    haze: bloomCanvas(P.haze, false)
+  };
+}
+
+let orbGroup = null, orbParts = null, orbMats = null;
+
+/* ── the orb ───────────────────────────────────────────────────────────────
+   A shader orb: a displaced sphere lit by fresnel, inside a second BackSide
+   shell that supplies the atmosphere. Adapted from a standalone sketch, with
+   four changes forced by living inside this file rather than a blank page:
+
+   · No bloom pass. EffectComposer and UnrealBloomPass are not in the bundled
+     three, and force-graph's own composer post-processes the WHOLE scene —
+     bloom there would light up every face and shell, not the orb. The outer
+     glow is an additive haze sprite instead, which is local by construction.
+   · No global tone mapping. ACES exposure would restyle every node in the
+     scene to flatter one object.
+   · Scaled from the sketch's 1.25 to our 30, and every frequency in the
+     shader normalised by that radius so the look is scale-independent.
+   · It churns rather than breathes. The sketch pulsed its scale and its
+     luminosity together; gas does neither. What moves here is the density
+     INSIDE the surface — fbm noise, domain-warped, advected along circles so
+     the motion is seamless rather than a loop with a seam in it.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const ORB_NOISE = `
+  vec3 hash3(vec3 p){
+    p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
+             dot(p, vec3(269.5, 183.3, 246.1)),
+             dot(p, vec3(113.5, 271.9, 124.6)));
+    return fract(sin(p) * 43758.5453123) * 2.0 - 1.0;
+  }
+  float vnoise(vec3 p){
+    vec3 i = floor(p), f = fract(p);
+    vec3 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(dot(hash3(i + vec3(0,0,0)), f - vec3(0,0,0)),
+                       dot(hash3(i + vec3(1,0,0)), f - vec3(1,0,0)), u.x),
+                   mix(dot(hash3(i + vec3(0,1,0)), f - vec3(0,1,0)),
+                       dot(hash3(i + vec3(1,1,0)), f - vec3(1,1,0)), u.x), u.y),
+               mix(mix(dot(hash3(i + vec3(0,0,1)), f - vec3(0,0,1)),
+                       dot(hash3(i + vec3(1,0,1)), f - vec3(1,0,1)), u.x),
+                   mix(dot(hash3(i + vec3(0,1,1)), f - vec3(0,1,1)),
+                       dot(hash3(i + vec3(1,1,1)), f - vec3(1,1,1)), u.x), u.y), u.z);
+  }
+  /* three octaves, not four: this runs per fragment on top of a whole graph,
+     and the fourth octave is invisible at the size the orb is drawn */
+  float fbm(vec3 p){
+    float a = 0.5, s = 0.0;
+    for (int i = 0; i < 3; i++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; }
+    return s;
+  }
+  /* Advection on circles of INTEGER harmonics, so the whole field returns to
+     where it started after one turn of uPhase. That is what lets the flat
+     view bake a handful of frames and loop them without a jump. */
+  /* The sketch leaned on the renderer's ACES tone mapping and 1.15 exposure to
+     hold its highlights. Turning those on here would restyle every node in the
+     scene to flatter one object, so the same curve is applied per fragment,
+     inside the orb only. Without it the core term saturates and the orb
+     renders as a flat white disc. */
+  vec3 aces(vec3 x){
+    x *= 1.15;
+    return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+  }
+  float gasDensity(vec3 q, float phase){
+    vec3 fa = vec3(cos(phase), sin(phase), cos(2.0 * phase)) * 0.30;
+    vec3 fb = vec3(sin(2.0 * phase), cos(3.0 * phase), sin(phase)) * 0.24;
+    vec2 w = vec2(fbm(q * 1.7 + fa), fbm(q * 1.9 + fb + 4.7));
+    float d = fbm(q * 2.6 + vec3(w, w.x * 0.7) * 1.5 + fa * 0.6);
+    return clamp(d * 0.5 + 0.5, 0.0, 1.0);
+  }
+`;
+
+function orbMaterials() {
+  const dark = PAL.dark;
+  const core = dark ? [1.00, 1.00, 1.00] : [0.24, 0.25, 0.40];
+  const atmo = dark ? [0.72, 0.88, 1.00] : [0.60, 0.63, 0.82];
+  const shell = dark ? [0.68, 0.84, 1.00] : [0.52, 0.56, 0.76];
+  const U = () => ({
+    uPhase: { value: 0 },
+    uSpin:  { value: 0 },
+    uR:     { value: 1 },
+    uCore:  { value: new THREE.Vector3(core[0], core[1], core[2]) },
+    uAtmo:  { value: new THREE.Vector3(atmo[0], atmo[1], atmo[2]) },
+    uDark:  { value: dark ? 1 : 0 }
+  });
+
+  const orb = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false,
+    blending: dark ? THREE.AdditiveBlending : THREE.NormalBlending,
+    uniforms: U(),
+    vertexShader: `
+      uniform float uPhase; uniform float uR;
+      varying vec3 vNormal; varying vec3 vWorld; varying vec3 vLocal;
+      void main(){
+        vec3 p = position;
+        /* the surface itself only stirs — no breathing scale */
+        float n = sin(p.x / uR * 4.0 + uPhase * 0.6)
+                * sin(p.y / uR * 3.7 - uPhase * 0.4)
+                * sin(p.z / uR * 4.3 + uPhase * 0.5);
+        p += normal * n * uR * 0.016;
+        vLocal = position / uR;
+        vec4 world = modelMatrix * vec4(p, 1.0);
+        vWorld = world.xyz;
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * viewMatrix * world;
+      }`,
+    fragmentShader: ORB_NOISE + `
+      uniform float uPhase; uniform float uSpin; uniform float uDark;
+      uniform vec3 uCore; uniform vec3 uAtmo;
+      varying vec3 vNormal; varying vec3 vWorld; varying vec3 vLocal;
+      void main(){
+        vec3 viewDir = normalize(cameraPosition - vWorld);
+        float facing = max(dot(normalize(vNormal), viewDir), 0.0);
+        float fresnel = pow(1.0 - facing, 2.8);
+        float core = pow(facing, 0.45);
+
+        /* the gas. sampled in the sphere's own frame so it rolls with the
+           body instead of sliding across a fixed surface */
+        float ca = cos(uSpin), sa = sin(uSpin);
+        vec3 q = vec3(vLocal.x * ca + vLocal.z * sa, vLocal.y,
+                     -vLocal.x * sa + vLocal.z * ca);
+        float gas = gasDensity(q, uPhase);
+        float wisp = mix(0.55, 1.40, smoothstep(0.22, 0.86, gas));
+
+        vec3 color = mix(uCore, uAtmo, fresnel * 0.7);
+        float brightness = (core * 0.95 + fresnel * 0.60) * mix(1.0, wisp, 0.95);
+        float alpha = core * 0.72 + fresnel * 0.42;
+        alpha = smoothstep(0.02, 1.0, alpha) * mix(1.0, wisp, 0.75);
+
+        if (uDark < 0.5) {
+          /* On white nothing can be added to the ground, so the orb sits ON it
+             instead: denser in the middle, darker where the gas is thick. Two
+             things this needs that the additive path does not — the wisps have
+             to swing the ALPHA hard, or the churn is invisible against a pale
+             ground; and the silhouette has to fade, or a fresnel-bright rim
+             becomes a drawn circle and the orb turns into a marble. */
+          float thick = mix(0.42, 1.30, wisp);
+          color = mix(uAtmo, uCore, clamp(facing * 0.55 + (wisp - 0.5) * 0.7, 0.0, 1.0));
+          alpha = (0.16 + 0.52 * core + 0.20 * fresnel) * thick;
+          alpha *= smoothstep(0.0, 0.20, facing);
+          gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
+          return;
+        }
+        gl_FragColor = vec4(aces(color * brightness), clamp(alpha, 0.0, 1.0));
+      }`
+  });
+
+  const atmosphere = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, side: THREE.BackSide,
+    blending: dark ? THREE.AdditiveBlending : THREE.NormalBlending,
+    uniforms: Object.assign(U(), {
+      uShell: { value: new THREE.Vector3(shell[0], shell[1], shell[2]) }
+    }),
+    vertexShader: `
+      uniform float uR;
+      varying vec3 vLocal;
+      void main(){
+        vLocal = position / uR;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: ORB_NOISE + `
+      uniform float uPhase; uniform float uDark; uniform vec3 uShell;
+      varying vec3 vLocal;
+      void main(){
+        float d = length(vLocal);
+        float glow = 1.0 - smoothstep(0.84, 1.24, d);
+        /* the shell churns too, half a turn out of step with the body, so the
+           halo is never a clean ring */
+        float gas = gasDensity(vLocal * 0.8, uPhase + 3.14159);
+        float a = glow * glow * mix(0.6, 1.35, gas) * (uDark > 0.5 ? 0.24 : 0.16);
+        gl_FragColor = vec4(uShell, clamp(a, 0.0, 1.0));
+      }`
+  });
+
+  return { orb: orb, atmosphere: atmosphere, dark: dark };
+}
+
+function buildOrb() {
+  if (orbGroup) {
+    graph.scene().remove(orbGroup);
+    orbGroup.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    });
+  }
+  const R = 30;                                   // well inside the AdCom shell at 48
+  orbMats = orbMaterials();
+  orbMats.orb.uniforms.uR.value = R;
+  orbMats.atmosphere.uniforms.uR.value = R * 1.22;
+
+  orbGroup = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), orbMats.orb);
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(R * 1.22, 48, 48), orbMats.atmosphere);
+
+  /* Standing in for the bloom pass we do not have. Additive on the dark
+     plane, a soft tint on the light one. */
+  const haze = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(bloomCanvas(PAL.dark ? "168,196,255" : "138,144,190", false)),
+    transparent: true, depthWrite: false, opacity: PAL.dark ? 0.34 : 0.22,
+    blending: PAL.dark ? THREE.AdditiveBlending : THREE.NormalBlending
+  }));
+  haze.scale.set(R * 3.4, R * 3.4, 1);
+
+  orbGroup.add(haze, shell, body);
+  orbGroup.renderOrder = 1;
+  graph.scene().add(orbGroup);
+  orbParts = { body: body, shell: shell, haze: haze, R: R };
+}
+
+/* Called every frame. Two uniform writes and two rotations — no pulse. */
+function animateOrb() {
+  if (!orbParts || CALM) return;
+  const t = performance.now() / 1000;
+  const phase = (t * 0.16) % (Math.PI * 2);       // one full churn ≈ 39s
+  orbMats.orb.uniforms.uPhase.value = phase;
+  orbMats.orb.uniforms.uSpin.value = t * 0.05;
+  orbMats.atmosphere.uniforms.uPhase.value = phase;
+  orbParts.body.rotation.y = t * 0.025;
+  orbParts.body.rotation.x = Math.sin(t * 0.15) * 0.018;
+  orbParts.shell.rotation.y = -t * 0.012;
+}
+
+/* ── the same orb, baked for the flat view ────────────────────────────────
+   SVG cannot run a shader, so rather than paint a lookalike the flat map
+   renders THIS orb offscreen — one turn of the churn, a handful of frames —
+   and flips through them. Because the gas advects on integer harmonics the
+   last frame meets the first, so a `steps()` animation loops without a jump
+   and costs nothing at runtime. Falls back to the painted pearl if a second
+   WebGL context is refused.                                                 */
+function orbSheet(frames, size) {
+  let r = null;
+  try {
+    const cv = document.createElement("canvas");
+    cv.width = size * frames; cv.height = size;
+    r = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true,
+                                  preserveDrawingBuffer: true });
+    r.setSize(size * frames, size, false);
+    r.setScissorTest(true);
+    if (THREE.SRGBColorSpace) r.outputColorSpace = THREE.SRGBColorSpace;
+    /* Additive light needs something to add TO, and a baked PNG has nothing.
+       Cleared transparent it becomes a grey box; cleared to the page colour, a
+       box that ALMOST matches, which is worse; and mix-blend-mode cannot save
+       it because the pan/zoom transform on the map puts the layer in its own
+       stacking context, which isolates the blend. So the SHEET ONLY is baked
+       with normal blending and real alpha. Over a near-black plane, white
+       composited normally and white added are the same picture. */
+    r.setClearColor(0x000000, 0);
+
+    const M = orbMaterials();
+    M.orb.blending = THREE.NormalBlending;
+    M.atmosphere.blending = THREE.NormalBlending;
+    const R = 1;
+    M.orb.uniforms.uR.value = R;
+    M.atmosphere.uniforms.uR.value = R * 1.22;
+    const scene = new THREE.Scene();
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(R, 96, 96), M.orb));
+    scene.add(new THREE.Mesh(new THREE.SphereGeometry(R * 1.22, 48, 48), M.atmosphere));
+    const cam = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+    cam.position.set(0, 0, 4.5);
+
+    for (let i = 0; i < frames; i++) {
+      const ph = (i / frames) * Math.PI * 2;
+      M.orb.uniforms.uPhase.value = ph;
+      M.orb.uniforms.uSpin.value = ph * 0.25;
+      M.atmosphere.uniforms.uPhase.value = ph;
+      r.setViewport(i * size, 0, size, size);
+      r.setScissor(i * size, 0, size, size);
+      r.render(scene, cam);
+    }
+    const url = cv.toDataURL();
+    scene.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
+    r.dispose();
+    return url;
+  } catch (e) {
+    if (r) { try { r.dispose(); } catch (e2) {} }
+    return null;                                   // painted pearl takes over
+  }
 }
 
 /* A hidden tier should not leave its shell floating there. */
@@ -6550,6 +6970,7 @@ function frame() {
   if (!graph || flatMode) return;    // nothing 3D to billboard while flat
   const cam = graph.camera();
   if (!cam) return;
+  animateOrb();
   const camPos = cam.position;
   const maxR = TIERS[TIERS.length - 1].radius;
   const _camDir = _v.copy(camPos).normalize().clone();
@@ -6934,7 +7355,7 @@ function sheetTemplateCSV() {
    an imported CSV with a different shape still lays out.
 
    Two deliberate departures from the sphere:
-     · a small orb holds the exact centre, so the middle is not a person;
+     · a small inert orb holds the exact centre, so the middle is not a person;
      · the first tier is drawn as a RING and a second-tier line stops at that
        ring rather than at any one member — the flat equivalent of "answers to
        the body", which the sphere says with distance instead.
@@ -6955,7 +7376,6 @@ const Flat = (() => {
   const at = (r, a) => [CC + r * Math.cos(a), CC + r * Math.sin(a)];
   const labelOf = n => n.name || n.role;
   const clip = s => s.length > MAXCH ? s.slice(0, MAXCH - 1).trimEnd() + "…" : s;
-  const tierIndex = id => TIERS.findIndex(t => t.id === id);
 
   /* Walk up until we reach a second-tier node — that is the wedge this node
      belongs in. Bounded, so a roster with a reporting cycle cannot hang. */
@@ -6984,19 +7404,29 @@ const Flat = (() => {
     const R_LABEL = (leafTiers.length ? Math.max.apply(null, leafTiers.map(id => rOf[id]))
                                      : R_BRANCH) + LABEL_GAP;
 
+    /* Children in roster order, then walk each branch depth-first. Ordering the
+       wedge by DEPTH (all members, then all communities) would put a community
+       most of a wedge away from the member it hangs off, and its spoke would
+       cut across every other spoke to get there. Depth-first puts each
+       community immediately beside its host, so the spoke is short and the
+       group reads as belonging to that person. Works at any nesting depth. */
+    const childrenOf = {};
+    nodes.forEach(n => parentsOf(n).forEach(pid => {
+      (childrenOf[pid] = childrenOf[pid] || []).push(n);
+    }));
+    const placed = new Set();
+    function walk(id, out, depth) {
+      (childrenOf[id] || []).forEach(c => {
+        if (c.tier === t0 || c.tier === t1 || placed.has(c.id)) return;
+        placed.add(c.id);
+        out.push(c);
+        if (depth < 6) walk(c.id, out, depth + 1);     // bounded: a cycle can't hang it
+      });
+    }
     const kids = {};
-    branches.forEach(b => kids[b.id] = []);
-    const loose = [];
-    nodes.forEach(n => {
-      if (n.tier === t0 || n.tier === t1) return;
-      const owner = branchOf(n, t1);
-      if (owner && kids[owner]) kids[owner].push(n); else loose.push(n);
-    });
-    const order = {}; nodes.forEach((n, i) => order[n.id] = i);
-    const sort = arr => arr.sort((a, b) =>
-      (tierIndex(a.tier) - tierIndex(b.tier)) || (order[a.id] - order[b.id]));
-    branches.forEach(b => sort(kids[b.id]));
-    sort(loose);
+    branches.forEach(b => { kids[b.id] = []; walk(b.id, kids[b.id], 0); });
+    const loose = nodes.filter(n =>
+      n.tier !== t0 && n.tier !== t1 && !placed.has(n.id));
 
     const cells = branches.map(b => ({ node: b, leaves: kids[b.id] }));
     if (loose.length) cells.push({ node: null, leaves: loose });
@@ -7081,45 +7511,68 @@ const Flat = (() => {
     svg.setAttribute("viewBox", "0 0 " + VB + " " + VB);
     gDefs = mk("defs"); svg.appendChild(gDefs);
     gRoot = mk("g"); svg.appendChild(gRoot);
-    gRing = mk("g"); gLink = mk("g"); gOrb = mk("g", { id: "orb" }); gNode = mk("g");
+    gRing = mk("g"); gLink = mk("g"); gOrb = mk("g", { id: "orb", "aria-hidden": "true" }); gNode = mk("g");
     [gRing, gLink, gOrb, gNode].forEach(g => gRoot.appendChild(g));
     wire();
   }
 
+  /* The flat orb is the SAME orb as the sphere's, not a lookalike: the shader
+     is rendered offscreen for one turn of the churn and the frames are flipped
+     through with a `steps()` animation. The gas advects on integer harmonics,
+     so the last frame meets the first and the loop has no seam. If a second
+     WebGL context is refused — the no-WebGL case, where this view is all the
+     user has — it falls back to the painted pearl. */
+  const ORB_FRAMES = 24, ORB_TILE = 168;
+
   function drawOrb() {
-    while (gDefs.firstChild) gDefs.removeChild(gDefs.firstChild);
     while (gOrb.firstChild) gOrb.removeChild(gOrb.firstChild);
-    const grad = (id, stops) => {
-      const g = mk("radialGradient", { id: id });
-      stops.forEach(st => g.appendChild(mk("stop",
-        { offset: st[0], "stop-color": st[1], "stop-opacity": st[2] })));
-      gDefs.appendChild(g);
-    };
-    const t0 = PAL.tier[0], t1 = PAL.tier[1], t2 = PAL.tier[2];
-    /* A glow made of light works on the dark plane; the same recipe on white
-       reads as a smudge, so there the orb is built from the warm tiers. */
-    if (PAL.dark) {
-      grad("orbGlow", [[0, PAL.ink, .30], [.34, t1, .22], [.68, t2, .07], [1, t1, 0]]);
-      grad("orbMist", [[0, t2, .20], [.55, t1, .12], [1, t0, 0]]);
-      grad("orbCore", [[0, PAL.ink, .95], [.5, t1, .75], [1, t1, .1]]);
+    const R = 54;
+    const g = mk("g", { transform: "translate(" + CC + " " + CC + ")" });
+    const sheet = CALM ? null : orbSheet(ORB_FRAMES, ORB_TILE);
+
+    if (sheet) {
+      const w = R * 2.6;
+      const clipId = "orbclip";
+      const defs = mk("defs");
+      const cp = mk("clipPath", { id: clipId });
+      cp.appendChild(mk("rect", { x: -w / 2, y: -w / 2, width: w, height: w }));
+      defs.appendChild(cp); g.appendChild(defs);
+      const win = mk("g", { "clip-path": "url(#" + clipId + ")" });
+      const strip = mk("g", { class: "orb-strip" });
+      const im = mk("image", { x: -w / 2, y: -w / 2,
+        width: w * ORB_FRAMES, height: w, preserveAspectRatio: "none" });
+      im.setAttributeNS("http://www.w3.org/1999/xlink", "href", sheet);
+      im.setAttribute("href", sheet);
+      strip.appendChild(im);
+      strip.style.setProperty("--orb-step", (-w).toFixed(2) + "px");
+      strip.style.setProperty("--orb-frames", ORB_FRAMES);
+      win.appendChild(strip);
+      g.appendChild(win);
     } else {
-      grad("orbGlow", [[0, t1, .55], [.34, t1, .34], [.7, t2, .12], [1, t1, 0]]);
-      grad("orbMist", [[0, t2, .26], [.55, t1, .18], [1, t0, 0]]);
-      grad("orbCore", [[0, t1, 1], [.55, t1, .85], [1, t0, .3]]);
+      const C = orbCanvases(), P = C.P;
+      function layer(canvas, scale, opacity, cls, dx, dy) {
+        const w = R * scale;
+        const wrap = mk("g", { class: cls || "" });
+        const im = mk("image", { x: (-w / 2 + (dx || 0)).toFixed(1),
+          y: (-w / 2 + (dy || 0)).toFixed(1), width: w.toFixed(1), height: w.toFixed(1),
+          opacity: opacity, preserveAspectRatio: "none" });
+        const url = canvas.toDataURL();
+        im.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
+        im.setAttribute("href", url);
+        wrap.appendChild(im); g.appendChild(wrap);
+      }
+      layer(C.haze, 3.0, P.hazeOp, "orb-haze");
+      layer(C.clouds[0], 1.94, P.cloudOp, "orb-cloud-a");
+      layer(C.clouds[1], 2.05, P.cloudOp * 0.85, "orb-cloud-b");
+      layer(C.clouds[2], 2.16, P.cloudOp, "orb-cloud-c");
+      layer(C.rim, 2.02, 1, "orb-rim");
+      layer(C.core, 1.05, P.coreOp, "orb-core", R * 0.16, R * 0.10);
     }
-    const inner = mk("g", { transform: "translate(" + CC + " " + CC + ")" });
-    inner.appendChild(mk("circle", { class: "orb-glow", cx: 0, cy: 0, r: 72, fill: "url(#orbGlow)" }));
-    inner.appendChild(mk("circle", { class: "orb-mist", cx: 0, cy: 0, r: 44, fill: "url(#orbMist)" }));
-    inner.appendChild(mk("circle", { class: "orb-arc-a", cx: 0, cy: 0, r: 33, fill: "none",
-      stroke: t1, "stroke-opacity": .42, "stroke-width": 1.3, "stroke-dasharray": "34 140", "stroke-linecap": "round" }));
-    inner.appendChild(mk("circle", { class: "orb-arc-b", cx: 0, cy: 0, r: 25, fill: "none",
-      stroke: t2, "stroke-opacity": .40, "stroke-width": 1.2, "stroke-dasharray": "18 96", "stroke-linecap": "round" }));
-    inner.appendChild(mk("circle", { class: "orb-core", cx: 0, cy: 0, r: 11, fill: "url(#orbCore)" }));
-    gOrb.appendChild(inner);
-    gOrb.appendChild(mk("circle", { class: "hit", cx: CC, cy: CC, r: 46 }));
-    const lab = (typeof CORE === "object" && CORE && CORE.label) || "";
+
+    gOrb.appendChild(g);
+    const lab = (typeof ORB === "object" && ORB && ORB.label) || "";
     if (lab) {
-      const cap = mk("text", { class: "lbl core", x: CC, y: CC + 66,
+      const cap = mk("text", { class: "lbl core", x: CC, y: CC + R + 30,
         "text-anchor": "middle", "dominant-baseline": "central" });
       cap.textContent = lab;
       gOrb.appendChild(cap);
@@ -7246,8 +7699,17 @@ const Flat = (() => {
       view.y = my - (my - view.y) * (k2 / view.k);
       view.k = k2; applyView();
     }, { passive: false });
+    /* BUG THIS FIXES: capturing the pointer on the <svg> retargets every later
+       pointer event — and the click derived from them — to the <svg> itself, so
+       a click handler asking `e.target.closest(".node")` always got null and
+       every click read as "background, clear the selection". Hover looked fine
+       because hovering never captures. So the node under the press is recorded
+       HERE, before capture can rewrite it, and the selection happens on
+       pointerup if the pointer did not travel. */
     svg.addEventListener("pointerdown", e => {
-      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+      const g = e.target.closest && e.target.closest(".node");
+      drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false,
+               hit: g ? g.dataset.id : null };
       svg.setPointerCapture(e.pointerId); svg.classList.add("dragging");
     });
     svg.addEventListener("pointermove", e => {
@@ -7258,7 +7720,13 @@ const Flat = (() => {
       view.x = drag.vx + dx; view.y = drag.vy + dy; applyView();
     });
     svg.addEventListener("pointerup", () => {
-      svg.classList.remove("dragging"); setTimeout(() => { drag = null; }, 0);
+      svg.classList.remove("dragging");
+      const d = drag; drag = null;
+      if (!d || d.moved) return;                 // that was a pan, not a click
+      select(d.hit ? nodeById[d.hit] : null);    // null = background, clear it
+    });
+    svg.addEventListener("pointercancel", () => {
+      svg.classList.remove("dragging"); drag = null;
     });
     svg.addEventListener("pointerover", e => {
       const g = e.target.closest && e.target.closest(".node"); if (!g) return;
@@ -7268,27 +7736,10 @@ const Flat = (() => {
       if (e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest(".node")) return;
       if (hovered) { hovered = null; recomputeDim(); }
     });
-    svg.addEventListener("click", e => {
-      if (drag && drag.moved) return;
-      if (e.target.closest && e.target.closest("#orb")) { showCore(); return; }
-      const g = e.target.closest && e.target.closest(".node");
-      select(g ? nodeById[g.dataset.id] : null);
-    });
     svg.addEventListener("keydown", e => {
       const g = e.target.closest && e.target.closest(".node");
       if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(nodeById[g.dataset.id]); }
     });
-  }
-
-  function showCore() {
-    const c = (typeof CORE === "object" && CORE) ? CORE : {};
-    selected = null; recomputeDim();
-    $("#panel-body").innerHTML =
-      '<div class="p-head"><div><h2 class="p-role">' + esc(c.title || "The centre") + "</h2>" +
-      (c.label ? '<p class="p-name">' + esc(c.label) + "</p>" : "") +
-      "</div></div>" +
-      (c.blurb ? '<p class="p-blurb">' + esc(c.blurb) + "</p>" : "");
-    document.body.classList.add("panel-open");
   }
 
   return {
@@ -7480,7 +7931,7 @@ function wireUI() {
    builder with explicit rows — which is what you want once real content exists. */
 function serializeSphere() {
   const root = document.documentElement.cloneNode(true);
-  root.setAttribute("data-theme", document.documentElement.dataset.theme || "dark");
+  root.setAttribute("data-theme", document.documentElement.dataset.theme || "light");
   root.querySelectorAll("#graph canvas, .graph-tooltip, .scene-nav-info, #label-layer").forEach(e => e.remove());
   ["#graph", "#flat", "#panel-body", "#table-wrap", "#legend-items"].forEach(sel => {
     const e = root.querySelector(sel); if (e) e.innerHTML = "";
